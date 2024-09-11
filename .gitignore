@@ -1,0 +1,12 @@
+
+PAW_Participants.xlsx
+PAW_Update_Plan.docx
+sourcedata/
+documents/
+logs/
+scripts/logs/
+scripts/credentials/
+scripts/emotiv/
+scripts/ema/
+__pycache__/
+desktop.ini

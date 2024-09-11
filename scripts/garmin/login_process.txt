@@ -1,0 +1,26 @@
+# ssh into ND server
+ssh dschaed3@tesserae-wearable.crc.nd.edu
+
+# Load the mongodb environment
+mongo -u denny
+
+# Connect to the garmin database
+use garmin
+
+show collections
+
+# Find all subjects data within a given collection
+db.collection.find({'userAccessToken': 'cfcd3c11-566c-4b62-93df-39df7d17bf88'})
+
+# Iterate through subjects of interest
+for (id in subjects){
+	var oauth_token = db.tokens.find({'email':id}).toArray()[0]['oauth_token']
+
+	var json = {
+		'dailies' : db.dailies.find({'userAccessToken':oauth_token}).toArray(),
+		'activities' : db.activies.find({'userAccessToken':oauth_token}).toArray(),
+		'epochs' : db.epochs.find({'userAccessToken':oauth_token}).toArray(),
+		'activity_details' : db.activityDetails.find({'userAccessToken':oauth_token}).toArray()
+	}
+
+	payload[id] = json
