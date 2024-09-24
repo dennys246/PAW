@@ -1,4 +1,4 @@
-import io, os, urllib, pymongo, subprocess, csv, sys, time, math, dropbox
+import io, os, urllib, pymongo, subprocess, csv, sys, time, math, dropbox, cortex
 import shutil, psutil, signal, smtplib, atexit, pytz, math, pyminizip, zipfile
 from garminconnect import Garmin, GarminConnectConnectionError, GarminConnectTooManyRequestsError, GarminConnectAuthenticationError
 #from googleapiclient.discovery import build
@@ -112,25 +112,94 @@ class System:
 
 class EmotivConnection(System):
 	def __init__(self, debug = True, automatic = False, log_file = None, working_directory = None):
+
+		self.debug = debug
+		self.automatic = automatic
+		self.token = None
+
+		self.log_file = log_file
+		if working_directory != None:
+			self.working_directory = working_directory
+		else:
+			self.working_directory = "C:\\GitSpot\\PAW"
+
+		self.connect()
 		atexit.register(self.disconnect)
 		return
 
 	def connect(self):
 		# Grab credentials
-		with open('../emotiv/.app_id', 'r') as file:
+		with open(f'{self.working_directory}\scripts\credentials\emotiv_app_id.txt', 'r') as file:
 			self.client_id = file.read()[:-1]
-		with open('../emotiv/.app_key', 'r') as file:
+		with open(f'{self.working_directory}\scripts\credentials\emotiv_key.txt', 'r') as file:
 			self.client_secret = file.read()[:-1]
-		self.client_secret = ''
-		self.emotivpro_license = ''
+		with open(f'{self.working_directory}\scripts\credentials\emotivpro_license.txt', 'r') as file:
+			self.emotivpro_license = file.read()[:-1]
 
 		# Connect to cortex service
-		self.cor = cortex.Cortex(self.client_id, self.client_secret)
+		self.cortex = cortex.Cortex(self.client_id, self.client_secret)
+		self.cortex.license = self.emotivpro_license
 		return
 
 	def disconnect(self):
 		return
 
+	def authorize(self):
+		request = {
+		    "id": 1,
+		    "jsonrpc": "2.0",
+		    "method": "authorize",
+		    "params": {
+		        "clientId": self.client_id,
+		        "clientSecret": self.client_secret,
+				"license": self.emotivpro_license
+		    }
+		}
+		self.token = self.cortex.ws.send(json.dumps(request))
+
+	def query_records(self):
+		if self.token == None:
+			self.authorize()
+
+		request = {
+			"id": 1,
+			"jsonrpc": "2.0",
+			"method": "queryRecords",
+			"params": {
+			    "cortexToken": self.token,
+			    "offset": 0,
+			    "orderBy": [
+			        { "startDatetime": "DESC" }
+			    ],
+			    "query": {
+			        "applicationId": self.client_id,
+			        "licenseId": self.emotivpro_license
+			    },
+			    "includeSyncStatusInfo": true
+			}
+		}
+		response = self.cortex.ws.send(json.dumps(request))
+
+	def get_record(self, record_ids):
+		if self.token == None:
+			self.authorize()
+
+		request = {
+		    "id": 1,
+		    "jsonrpc": "2.0",
+		    "method": "exportRecord",
+		    "params": {
+		        "cortexToken": self.token ,
+		        "folder": "/tmp/edf",
+		        "format": "EDF",
+		        "recordIds": record_id,
+		        "streamTypes": [
+		            "EEG",
+		            "MOTION"
+		        ]
+			}
+		}
+		response = self.cortex.ws.send(json.dumps(request))
 
 class GarminConnection(System):
 	def __init__(self, subject_id = None, debug = True, automatic = False, log_file = None, working_directory = None):
@@ -380,7 +449,7 @@ class DropBoxConnection(System):
 
 		self.working_directory = working_directory
 
-		with open('../credentials/dropbox_creds.txt', 'r') as file:
+		with open(f'{self.working_directory}\scripts\credentials\dropbox_creds.txt', 'r') as file:
 			dropbox_creds = file.read().split('\n')
 
 		self.app_key = dropbox_creds[0]
@@ -432,17 +501,17 @@ class DriveConnection(System):
 	def connect(self):
 		self.scopes = ['https://www.googleapis.com/auth/drive']
 		self.creds = None
-		if os.path.exists('../credentials/token.json'):
-			self.creds = Credentials.from_authorized_user_file('../credentials/token.json', self.scopes)
+		if os.path.exists(f'{self.working_directory}\scripts\credentials\token.json'):
+			self.creds = Credentials.from_authorized_user_file(f'{self.working_directory}/scripts/credentials/token.json', self.scopes)
 		# If there are no (valid) credentials available, let the user log in.
 		if not self.creds or not self.creds.valid:
 		    if self.creds and self.creds.expired and self.creds.refresh_token:
 		        self.creds.refresh(Request())
 		    else:
-		        flow = InstalledAppFlow.from_client_secrets_file('../credentials/credentials.json', self.scopes)
+		        flow = InstalledAppFlow.from_client_secrets_file(f'{self.working_directory}/scripts/credentials/credentials.json', self.scopes)
 		        self.creds = flow.run_local_server(port=0)
 		    # Save the credentials for the next run
-		    with open('../credentials/token.json', 'w') as token:
+		    with open(f'{self.working_directory}\scripts\credentials\token.json', 'w') as token:
 		        token.write(self.creds.to_json())
 
 		self.service = build('drive', 'v3', credentials = self.creds) # Call for an API instance
@@ -534,7 +603,7 @@ class GmailConnection(System):
 		if log_file != None:
 			self.log_file = log_file
 
-		with open('../credentials/gmail_creds.txt', 'r') as file:
+		with open(f'{self.working_directory}\scripts\credentials\gmail_creds.txt', 'r') as file:
 			gmail_creds = file.read().split('\n')
 
 		self.email = gmail_creds[0]

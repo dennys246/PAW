@@ -77,11 +77,10 @@ class protocol: # Class to conduct workflow automation for the Pain Assessment w
 		self.xlApp = win32com.client.Dispatch("Excel.Application")
 		self.xlApp.DisplayAlerts = False
 
-		#self.GDrive = connector.DriveConnection(self.debug, self.automatic)
-
-		self.Dropbox = connector.DropBoxConnection(self.log_file)
-		self.Garmin = connector.GarminConnection(None, self.debug, self.automatic, self.log_file)
-		self.Gmail = connector.GmailConnection(self.debug, self.automatic, self.log_file)
+		#self.GDrive = connector.DriveConnection(self.debug, self.automatic)\
+		self.Dropbox = connector.DropBoxConnection(self.log_file, working_directory = self.paw_cwd)
+		self.Garmin = connector.GarminConnection(None, self.debug, self.automatic, self.log_file, working_directory = self.paw_cwd)
+		self.Gmail = connector.GmailConnection(self.debug, self.automatic, self.log_file, working_directory = self.paw_cwd)
 
 		#self.Twilio = connector.TwilioConnection(self.debug, self.automatic)
 
@@ -330,7 +329,7 @@ class protocol: # Class to conduct workflow automation for the Pain Assessment w
 		self.mongo = connector.MongoConnection()
 		self.mongo.connect()
 
-		with open('../credentials/nd_creds.txt', 'r') as file:
+		with open(f'{self.paw_cwd}/scripts/credentials/nd_creds.txt', 'r') as file:
 			nd_creds = file.read().split('\n')
 
 		username = nd_creds[0]
