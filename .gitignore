@@ -1,4 +1,3 @@
-
 PAW_Participants.xlsx
 PAW_Update_Plan.docx
 sourcedata/
@@ -8,5 +7,6 @@ scripts/logs/
 scripts/credentials/
 scripts/emotiv/
 scripts/ema/
+scripts/garmin/
 __pycache__/
 desktop.ini
